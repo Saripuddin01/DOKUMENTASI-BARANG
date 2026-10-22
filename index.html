@@ -1,0 +1,458 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dokumentasi Barang</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+<style>
+/* Layout: bilah atas tetap, lalu satu blok per tanggal berisi grid 6 kolom foto + nama, sama dengan dokumen Word. */
+:root {
+  --bg: #f3f7f9;
+  --panel: #ffffff;
+  --ink: #14262e;
+  --muted: #566d77;
+  --line: #b9ccd4;
+  --band: #8fdcf0;
+  --band-ink: #0b2a33;
+  --accent: #0b6f8a;
+  --accent-ink: #ffffff;
+  --danger: #a8321f;
+  --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1a1f; --panel: #16262d; --ink: #e6f1f5; --muted: #93aab4; --line: #2f4852;
+    --band: #1f6277; --band-ink: #eaf9fd; --accent: #5cc8e3; --accent-ink: #06222b; --danger: #ff8d79;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1a1f; --panel: #16262d; --ink: #e6f1f5; --muted: #93aab4; --line: #2f4852;
+  --band: #1f6277; --band-ink: #eaf9fd; --accent: #5cc8e3; --accent-ink: #06222b; --danger: #ff8d79;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+header.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.bar h1 { font-size: 20px; margin: 0; line-height: 1.2; }
+.bar .stat { color: var(--muted); font-size: 13px; }
+.bar .title { min-width: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button, .btn, input, textarea { font: inherit; color: inherit; }
+button, .btn {
+  min-height: 40px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+button:hover, .btn:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button.danger { color: var(--danger); }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input[type="date"], .name {
+  min-height: 40px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 0 10px;
+}
+.adddate { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+.hint { color: var(--muted); font-size: 13px; margin: 14px 0 0; max-width: 70ch; }
+.msg { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg);
+  padding: 10px 16px; border-radius: 6px; z-index: 20; max-width: calc(100% - 32px); }
+
+section.day { margin-top: 20px; background: var(--panel); border: 1px solid var(--line); }
+.day-head {
+  background: var(--band); color: var(--band-ink); display: flex; flex-wrap: wrap; gap: 8px 12px;
+  align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line);
+}
+.day-head h2 { margin: 0; font-size: 16px; flex: 1 1 auto; text-align: center; padding-left: 0; }
+.day-head .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.day-head input[type="date"] { min-height: 34px; }
+.day-head button { min-height: 34px; background: transparent; border-color: color-mix(in srgb, var(--band-ink) 40%, transparent); color: var(--band-ink); }
+.grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.cell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; position: relative; min-width: 0; }
+.cell:nth-child(6n) { border-right: 0; }
+.photo {
+  aspect-ratio: 3 / 4; width: 100%; border: 0; border-radius: 0; padding: 0; min-height: 0; background: color-mix(in srgb, var(--line) 25%, var(--panel));
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; overflow: hidden;
+}
+.photo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.photo.drag { outline: 3px dashed var(--accent); outline-offset: -3px; }
+.photo svg { width: 26px; height: 26px; }
+.name { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; text-align: center; resize: none; padding: 6px 4px; min-height: 52px; background: var(--panel); line-height: 1.25; font-size: 13px; }
+.del {
+  position: absolute; top: 4px; right: 4px; min-height: 26px; width: 26px; padding: 0; justify-content: center; border-radius: 50%;
+  background: color-mix(in srgb, var(--panel) 88%, transparent); font-size: 14px; line-height: 1;
+}
+.foot { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.paste { padding: 0 12px 12px; display: grid; gap: 8px; }
+.paste textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--panel); }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); margin-top: 20px; }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cell:nth-child(6n) { border-right: 1px solid var(--line); }
+  .cell:nth-child(3n) { border-right: 0; }
+}
+@media (max-width: 420px) { .day-head h2 { text-align: left; flex-basis: 100%; } }
+</style>
+
+<div class="wrap" id="app">
+  <header class="bar">
+    <div class="bar-in">
+      <div class="title"><h1>Dokumentasi Barang</h1><div class="stat" id="stat"></div></div>
+      <div class="actions">
+        <button id="btnBackup" title="Simpan semua data beserta foto sebagai file cadangan">Cadangan</button>
+        <label class="btn" for="restoreFile">Pulihkan</label>
+        <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+        <button class="primary" id="btnDocx">Simpan Word (.docx)</button>
+      </div>
+    </div>
+  </header>
+
+  <form class="adddate" id="addDateForm">
+    <label for="newDate"><b>Tanggal baru</b></label>
+    <input type="date" id="newDate" required>
+    <button class="primary" type="submit">Tambah tanggal</button>
+  </form>
+  <p class="hint">Isi nama barang dan ketuk kotak foto untuk memilih gambar. Data tersimpan otomatis di browser ini. Pakai Cadangan sebelum membersihkan data browser atau pindah perangkat.</p>
+
+  <main id="days"></main>
+</div>
+<input type="file" id="picker" accept="image/*" hidden>
+<input type="file" id="pickerMulti" accept="image/*" multiple hidden>
+<div class="msg" id="msg" hidden role="status"></div>
+
+<script>
+function buildDoc(docx, sections, fmtDate) {
+  const { Document, Paragraph, Table, TableRow, TableCell, TextRun, ImageRun, AlignmentType, WidthType,
+    ShadingType, VerticalAlign, HeightRule, BorderStyle } = docx;
+  const COLS = 6, TOTAL = 9026, W = Math.floor(TOTAL / COLS);
+  const line = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+  const borders = { top: line, bottom: line, left: line, right: line };
+  const BOX_W = 92, BOX_H = 112;
+
+  function bytes(dataUrl) {
+    const b = atob(dataUrl.split(",")[1]);
+    const a = new Uint8Array(b.length);
+    for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+  function imgPara(it) {
+    if (!it.img) return new Paragraph({ keepNext: true, children: [] });
+    const k = Math.min(BOX_W / it.w, BOX_H / it.h);
+    return new Paragraph({
+      keepNext: true, alignment: AlignmentType.CENTER,
+      children: [new ImageRun({
+        data: bytes(it.img), type: "jpg",
+        transformation: { width: Math.round(it.w * k), height: Math.round(it.h * k) }
+      })]
+    });
+  }
+  const rows = [];
+  for (const s of sections) {
+    rows.push(new TableRow({
+      cantSplit: true,
+      children: [new TableCell({
+        columnSpan: COLS, borders, verticalAlign: VerticalAlign.CENTER,
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: "8FDCF0" },
+        children: [new Paragraph({
+          keepNext: true, alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: "Tanggal " + fmtDate(s.date), bold: true, size: 20 })]
+        })]
+      })]
+    }));
+    for (let i = 0; i < s.items.length; i += COLS) {
+      const chunk = s.items.slice(i, i + COLS);
+      while (chunk.length < COLS) chunk.push(null);
+      rows.push(new TableRow({
+        cantSplit: true, height: { value: 1750, rule: HeightRule.ATLEAST },
+        children: chunk.map(it => new TableCell({
+          borders, width: { size: W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
+          children: [it ? imgPara(it) : new Paragraph({ keepNext: true, children: [] })]
+        }))
+      }));
+      rows.push(new TableRow({
+        cantSplit: true,
+        children: chunk.map(it => new TableCell({
+          borders, width: { size: W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: it && it.name ? [new TextRun({ text: it.name, size: 18 })] : []
+          })]
+        }))
+      }));
+    }
+  }
+  return new Document({
+    styles: { default: { document: { run: { font: "Calibri", size: 20 } } } },
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1440, bottom: 993, left: 1440 } } },
+      children: [new Table({
+        width: { size: TOTAL, type: WidthType.DXA },
+        columnWidths: Array(COLS).fill(W),
+        rows
+      })]
+    }]
+  });
+}
+
+</script>
+<script>
+(function () {
+  var MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  function fmt(iso) { var p = iso.split("-").map(Number); return p[2] + " " + MONTHS[p[1] - 1] + " " + p[0]; }
+  var uid = function () { return Math.random().toString(36).slice(2, 10); };
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { sections: [] };
+  var seedNames = ["beras","ayam dada fillet","minyak goreng 1L","semangka","tempe","wortel","buncis","bawang merah","bawang putih","merica biji","kecap ABC","saos sambel","saos tomat","mentega","royco ayam","gula pasir","daun bawang","tepung terigu","tepung maizena","jeruk nipis","saos tiram","daun salam","serai"];
+
+  /* ---------- penyimpanan (IndexedDB, boleh gagal) ---------- */
+  var dbp = null;
+  function openDb() {
+    if (dbp) return dbp;
+    dbp = new Promise(function (res) {
+      try {
+        var r = indexedDB.open("dokumentasi-barang", 1);
+        r.onupgradeneeded = function () { r.result.createObjectStore("kv"); };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { res(null); };
+      } catch (e) { res(null); }
+    });
+    return dbp;
+  }
+  function dbGet() {
+    return openDb().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (res) {
+        try { var q = db.transaction("kv").objectStore("kv").get("state"); q.onsuccess = function () { res(q.result || null); }; q.onerror = function () { res(null); }; }
+        catch (e) { res(null); }
+      });
+    });
+  }
+  var saveTimer = null, warned = false;
+  function persist() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      openDb().then(function (db) {
+        if (!db) { if (!warned) { warned = true; toast("Penyimpanan otomatis tidak tersedia di browser ini. Gunakan Cadangan."); } return; }
+        try { db.transaction("kv", "readwrite").objectStore("kv").put(state, "state"); } catch (e) {}
+      });
+    }, 400);
+  }
+  var tt = null;
+  function toast(t) { var m = $("msg"); m.textContent = t; m.hidden = false; clearTimeout(tt); tt = setTimeout(function () { m.hidden = true; }, 3500); }
+
+  /* ---------- foto ---------- */
+  function loadImg(file) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file), im = new Image();
+      im.onload = function () { res({ im: im, u: u }); };
+      im.onerror = function () { URL.revokeObjectURL(u); rej(new Error("gambar tidak terbaca")); };
+      im.src = u;
+    });
+  }
+  function compress(file) {
+    return loadImg(file).then(function (o) {
+      var max = 640, w = o.im.naturalWidth, h = o.im.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+      var cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+      var c = document.createElement("canvas"); c.width = cw; c.height = ch;
+      var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cw, ch); g.drawImage(o.im, 0, 0, cw, ch);
+      URL.revokeObjectURL(o.u);
+      return { img: c.toDataURL("image/jpeg", 0.82), w: cw, h: ch };
+    });
+  }
+
+  /* ---------- data ---------- */
+  function sortSections() { state.sections.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }); }
+  function findSec(id) { return state.sections.find(function (s) { return s.id === id; }); }
+  function newItem(name) { return { id: uid(), name: name || "", img: "", w: 3, h: 4 }; }
+  function addSection(date) {
+    var ex = state.sections.find(function (s) { return s.date === date; });
+    if (ex) return ex;
+    var s = { id: uid(), date: date, items: [] };
+    state.sections.push(s); sortSections(); return s;
+  }
+
+  /* ---------- tampilan ---------- */
+  function el(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) {
+      if (k === "text") e.textContent = attrs[k];
+      else if (k === "class") e.className = attrs[k];
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+  var camSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  var pickTarget = null;
+
+  function cellEl(sec, it) {
+    var photo = el("button", { type: "button", class: "photo", "aria-label": "Pilih foto " + (it.name || "barang") });
+    function paint() {
+      photo.replaceChildren();
+      if (it.img) { var im = el("img", { alt: it.name || "Foto barang" }); im.src = it.img; photo.appendChild(im); }
+      else { photo.innerHTML = camSvg + "<span>Pilih foto</span>"; }
+    }
+    paint();
+    photo.addEventListener("click", function () { pickTarget = { sec: sec.id, item: it.id, repaint: paint }; $("picker").value = ""; $("picker").click(); });
+    photo.addEventListener("dragover", function (e) { e.preventDefault(); photo.classList.add("drag"); });
+    photo.addEventListener("dragleave", function () { photo.classList.remove("drag"); });
+    photo.addEventListener("drop", function (e) {
+      e.preventDefault(); photo.classList.remove("drag");
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) setPhoto(it, f, paint);
+    });
+    var name = el("textarea", { class: "name", rows: "2", placeholder: "Nama barang", "aria-label": "Nama barang" });
+    name.value = it.name;
+    name.addEventListener("input", function () { it.name = name.value; persist(); });
+    name.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+    var del = el("button", { type: "button", class: "del", title: "Hapus barang ini", "aria-label": "Hapus barang ini", text: "✕" });
+    del.addEventListener("click", function () { sec.items = sec.items.filter(function (x) { return x !== it; }); persist(); render(); });
+    return el("div", { class: "cell", "data-id": it.id }, [photo, name, del]);
+  }
+  function setPhoto(it, file, repaint) {
+    if (!file || !/^image\//.test(file.type)) { toast("File itu bukan gambar."); return Promise.resolve(); }
+    return compress(file).then(function (r) { it.img = r.img; it.w = r.w; it.h = r.h; repaint(); persist(); updateStat(); })
+      .catch(function () { toast("Foto tidak bisa dibaca. Coba foto lain."); });
+  }
+
+  function sectionEl(sec) {
+    var dateIn = el("input", { type: "date", "aria-label": "Ubah tanggal" }); dateIn.value = sec.date;
+    dateIn.addEventListener("change", function () {
+      if (!dateIn.value) { dateIn.value = sec.date; return; }
+      if (state.sections.some(function (s) { return s !== sec && s.date === dateIn.value; })) { toast("Tanggal itu sudah ada."); dateIn.value = sec.date; return; }
+      sec.date = dateIn.value; sortSections(); persist(); render();
+    });
+    var delSec = el("button", { type: "button", text: "Hapus tanggal" }), armed = false, armT = null;
+    delSec.addEventListener("click", function () {
+      if (!armed) { armed = true; delSec.textContent = "Yakin hapus?"; armT = setTimeout(function () { armed = false; delSec.textContent = "Hapus tanggal"; }, 3000); return; }
+      clearTimeout(armT); state.sections = state.sections.filter(function (s) { return s !== sec; }); persist(); render();
+    });
+    var head = el("div", { class: "day-head" }, [
+      el("h2", { text: "Tanggal " + fmt(sec.date) }),
+      el("div", { class: "tools" }, [dateIn, delSec])
+    ]);
+    var grid = el("div", { class: "grid" }, sec.items.map(function (it) { return cellEl(sec, it); }));
+    var add = el("button", { type: "button", text: "+ Barang" });
+    add.addEventListener("click", function () {
+      var it = newItem(); sec.items.push(it); persist(); render();
+      var n = document.querySelector('[data-id="' + it.id + '"] .name'); if (n) n.focus();
+    });
+    var multi = el("button", { type: "button", text: "+ Banyak foto" });
+    multi.addEventListener("click", function () { pickTarget = { sec: sec.id, multi: true }; $("pickerMulti").value = ""; $("pickerMulti").click(); });
+    var pasteBtn = el("button", { type: "button", text: "Tempel daftar nama" });
+    var pasteBox = el("div", { class: "paste", hidden: "" });
+    var ta = el("textarea", { placeholder: "Satu nama barang per baris", "aria-label": "Daftar nama barang" });
+    var ok = el("button", { type: "button", class: "primary", text: "Tambahkan ke tanggal ini" });
+    pasteBox.append(ta, ok);
+    pasteBtn.addEventListener("click", function () { pasteBox.hidden = !pasteBox.hidden; if (!pasteBox.hidden) ta.focus(); });
+    ok.addEventListener("click", function () {
+      var names = ta.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+      if (!names.length) return;
+      names.forEach(function (n) { sec.items.push(newItem(n)); }); persist(); render();
+    });
+    var foot = el("div", { class: "foot" }, [add, multi, pasteBtn]);
+    return el("section", { class: "day" }, [head, grid, foot, pasteBox]);
+  }
+
+  function updateStat() {
+    var n = 0, p = 0;
+    state.sections.forEach(function (s) { n += s.items.length; s.items.forEach(function (i) { if (i.img) p++; }); });
+    $("stat").textContent = state.sections.length + " tanggal · " + n + " barang · " + p + " foto";
+    $("btnDocx").disabled = !state.sections.length;
+  }
+  function render() {
+    var box = $("days"); box.replaceChildren();
+    if (!state.sections.length) box.appendChild(el("div", { class: "empty", text: "Belum ada tanggal. Pilih tanggal di atas lalu ketuk Tambah tanggal." }));
+    state.sections.forEach(function (s) { box.appendChild(sectionEl(s)); });
+    updateStat();
+  }
+
+  /* ---------- aksi ---------- */
+  $("addDateForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var v = $("newDate").value; if (!v) return;
+    var s = addSection(v); persist(); render();
+    var idx = state.sections.indexOf(s), node = $("days").children[idx];
+    if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("picker").addEventListener("change", function (e) {
+    var f = e.target.files[0]; if (!f || !pickTarget) return;
+    var s = findSec(pickTarget.sec); var it = s && s.items.find(function (x) { return x.id === pickTarget.item; });
+    if (it) setPhoto(it, f, pickTarget.repaint);
+  });
+  $("pickerMulti").addEventListener("change", function (e) {
+    var files = Array.prototype.slice.call(e.target.files); if (!files.length || !pickTarget) return;
+    var s = findSec(pickTarget.sec); if (!s) return;
+    files.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    toast("Memproses " + files.length + " foto...");
+    files.reduce(function (p, f) {
+      return p.then(function () {
+        var it = newItem(); return compress(f).then(function (r) { it.img = r.img; it.w = r.w; it.h = r.h; s.items.push(it); }).catch(function () {});
+      });
+    }, Promise.resolve()).then(function () { persist(); render(); toast("Foto ditambahkan. Isi nama barang di bawah tiap foto."); });
+  });
+
+  function getDownloads() {
+    return (window.claude && window.claude.use) ? window.claude.use("downloads") : Promise.resolve(null);
+  }
+  function saveFile(filename, data) {
+    return getDownloads().then(function (d) {
+      if (!d) { toast("Simpan file tidak tersedia di tampilan ini. Buka artifact di claude.ai."); return; }
+      return d.save({ filename: filename, data: data }).then(function () { toast("File disimpan."); })
+        .catch(function (err) { if (err && err.code === "declined") return; toast("File tidak bisa disimpan (" + ((err && err.code) || "error") + ")."); });
+    });
+  }
+  $("btnDocx").addEventListener("click", function () {
+    if (!window.docx) { toast("Pustaka Word belum termuat. Periksa koneksi lalu muat ulang."); return; }
+    var secs = state.sections.map(function (s) { return { date: s.date, items: s.items.map(function (i) { return { name: i.name, img: i.img, w: i.w, h: i.h }; }) }; });
+    var first = secs[0], last = secs[secs.length - 1];
+    var fn = first.date === last.date ? first.date : first.date + "_sd_" + last.date;
+    $("btnDocx").disabled = true;
+    docx.Packer.toBlob(buildDoc(docx, secs, fmt)).then(function (b) { return saveFile("Dokumentasi Barang " + fn + ".docx", b); })
+      .catch(function () { toast("Gagal membuat file Word."); })
+      .then(function () { updateStat(); });
+  });
+  $("btnBackup").addEventListener("click", function () {
+    saveFile("cadangan-dokumentasi-barang.json", JSON.stringify(state));
+  });
+  $("restoreFile").addEventListener("change", function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var d = JSON.parse(r.result);
+        if (!d || !Array.isArray(d.sections)) throw 0;
+        state = d; sortSections(); persist(); render(); toast("Data dipulihkan dari cadangan.");
+      } catch (x) { toast("File cadangan tidak valid."); }
+    };
+    r.readAsText(f); e.target.value = "";
+  });
+
+  /* ---------- mulai ---------- */
+  var today = new Date(), p2 = function (n) { return String(n).padStart(2, "0"); };
+  $("newDate").value = today.getFullYear() + "-" + p2(today.getMonth() + 1) + "-" + p2(today.getDate());
+  render();
+  dbGet().then(function (saved) {
+    if (saved && Array.isArray(saved.sections)) { state = saved; }
+    else {
+      var s = addSection("2026-08-19");
+      seedNames.forEach(function (n) { s.items.push(newItem(n)); });
+      persist();
+    }
+    render();
+  });
+})();
+</script>
+
+</body></html>
