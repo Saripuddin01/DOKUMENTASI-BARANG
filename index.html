@@ -2,7 +2,7 @@
 <title>Dokumentasi Barang</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <style>
 /* Layout: bilah atas tetap, lalu satu blok per tanggal berisi grid 6 kolom foto + nama, sama dengan dokumen Word. */
 :root {
@@ -77,9 +77,10 @@ section.day { margin-top: 20px; background: var(--panel); border: 1px solid var(
 .day-head .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .day-head input[type="date"] { min-height: 34px; }
 .day-head button { min-height: 34px; background: transparent; border-color: color-mix(in srgb, var(--band-ink) 40%, transparent); color: var(--band-ink); }
-.grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.row { display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); }
 .cell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; position: relative; min-width: 0; }
-.cell:nth-child(6n) { border-right: 0; }
+.cell:last-child { border-right: 0; }
+#newList { flex: 1 1 100%; min-height: 84px; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--panel); }
 .photo {
   aspect-ratio: 3 / 4; width: 100%; border: 0; border-radius: 0; padding: 0; min-height: 0; background: color-mix(in srgb, var(--line) 25%, var(--panel));
   display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; overflow: hidden;
@@ -96,11 +97,6 @@ section.day { margin-top: 20px; background: var(--panel); border: 1px solid var(
 .paste { padding: 0 12px 12px; display: grid; gap: 8px; }
 .paste textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--panel); }
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); margin-top: 20px; }
-@media (max-width: 760px) {
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .cell:nth-child(6n) { border-right: 1px solid var(--line); }
-  .cell:nth-child(3n) { border-right: 0; }
-}
 @media (max-width: 420px) { .day-head h2 { text-align: left; flex-basis: 100%; } }
 </style>
 
@@ -120,9 +116,10 @@ section.day { margin-top: 20px; background: var(--panel); border: 1px solid var(
   <form class="adddate" id="addDateForm">
     <label for="newDate"><b>Tanggal baru</b></label>
     <input type="date" id="newDate" required>
+    <textarea id="newList" placeholder="Daftar barang, satu nama per baris (boleh dikosongkan)" aria-label="Daftar barang"></textarea>
     <button class="primary" type="submit">Tambah tanggal</button>
   </form>
-  <p class="hint">Isi nama barang dan ketuk kotak foto untuk memilih gambar. Data tersimpan otomatis di browser ini. Pakai Cadangan sebelum membersihkan data browser atau pindah perangkat.</p>
+  <p class="hint">Tempel daftar barang di atas, kotak foto dibuat sebanyak daftar itu dan kolomnya menyesuaikan jumlahnya. Ketuk kotak foto untuk memilih gambar. Data tersimpan otomatis di browser ini. Pakai Cadangan sebelum membersihkan data browser atau pindah perangkat.</p>
 
   <main id="days"></main>
 </div>
@@ -134,7 +131,7 @@ section.day { margin-top: 20px; background: var(--panel); border: 1px solid var(
 function buildDoc(docx, sections, fmtDate) {
   const { Document, Paragraph, Table, TableRow, TableCell, TextRun, ImageRun, AlignmentType, WidthType,
     ShadingType, VerticalAlign, HeightRule, BorderStyle } = docx;
-  const COLS = 6, TOTAL = 9026, W = Math.floor(TOTAL / COLS);
+  const COLS = 6, GRID = 60, TOTAL = 9000, W = TOTAL / GRID;
   const line = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
   const borders = { top: line, bottom: line, left: line, right: line };
   const BOX_W = 92, BOX_H = 112;
@@ -161,7 +158,7 @@ function buildDoc(docx, sections, fmtDate) {
     rows.push(new TableRow({
       cantSplit: true,
       children: [new TableCell({
-        columnSpan: COLS, borders, verticalAlign: VerticalAlign.CENTER,
+        columnSpan: GRID, borders, verticalAlign: VerticalAlign.CENTER,
         shading: { type: ShadingType.CLEAR, color: "auto", fill: "8FDCF0" },
         children: [new Paragraph({
           keepNext: true, alignment: AlignmentType.CENTER,
@@ -171,18 +168,17 @@ function buildDoc(docx, sections, fmtDate) {
     }));
     for (let i = 0; i < s.items.length; i += COLS) {
       const chunk = s.items.slice(i, i + COLS);
-      while (chunk.length < COLS) chunk.push(null);
       rows.push(new TableRow({
         cantSplit: true, height: { value: 1750, rule: HeightRule.ATLEAST },
         children: chunk.map(it => new TableCell({
-          borders, width: { size: W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
+          borders, width: { size: W * (GRID / chunk.length), type: WidthType.DXA }, columnSpan: GRID / chunk.length, verticalAlign: VerticalAlign.CENTER,
           children: [it ? imgPara(it) : new Paragraph({ keepNext: true, children: [] })]
         }))
       }));
       rows.push(new TableRow({
         cantSplit: true,
         children: chunk.map(it => new TableCell({
-          borders, width: { size: W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
+          borders, width: { size: W * (GRID / chunk.length), type: WidthType.DXA }, columnSpan: GRID / chunk.length, verticalAlign: VerticalAlign.CENTER,
           children: [new Paragraph({
             alignment: AlignmentType.CENTER,
             children: it && it.name ? [new TextRun({ text: it.name, size: 18 })] : []
@@ -197,7 +193,7 @@ function buildDoc(docx, sections, fmtDate) {
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1440, bottom: 993, left: 1440 } } },
       children: [new Table({
         width: { size: TOTAL, type: WidthType.DXA },
-        columnWidths: Array(COLS).fill(W),
+        columnWidths: Array(GRID).fill(W),
         rows
       })]
     }]
@@ -342,7 +338,14 @@ function buildDoc(docx, sections, fmtDate) {
       el("h2", { text: "Tanggal " + fmt(sec.date) }),
       el("div", { class: "tools" }, [dateIn, delSec])
     ]);
-    var grid = el("div", { class: "grid" }, sec.items.map(function (it) { return cellEl(sec, it); }));
+    var per = window.matchMedia("(max-width: 760px)").matches ? 3 : 6;
+    var grid = el("div", { class: "grid" });
+    for (var i = 0; i < sec.items.length; i += per) {
+      var ch = sec.items.slice(i, i + per);
+      var r = el("div", { class: "row" }, ch.map(function (it) { return cellEl(sec, it); }));
+      r.style.setProperty("--n", ch.length);
+      grid.appendChild(r);
+    }
     var add = el("button", { type: "button", text: "+ Barang" });
     add.addEventListener("click", function () {
       var it = newItem(); sec.items.push(it); persist(); render();
@@ -382,7 +385,10 @@ function buildDoc(docx, sections, fmtDate) {
   $("addDateForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var v = $("newDate").value; if (!v) return;
-    var s = addSection(v); persist(); render();
+    var s = addSection(v);
+    $("newList").value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (n) { s.items.push(newItem(n)); });
+    $("newList").value = "";
+    persist(); render();
     var idx = state.sections.indexOf(s), node = $("days").children[idx];
     if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -443,6 +449,7 @@ function buildDoc(docx, sections, fmtDate) {
   var today = new Date(), p2 = function (n) { return String(n).padStart(2, "0"); };
   $("newDate").value = today.getFullYear() + "-" + p2(today.getMonth() + 1) + "-" + p2(today.getDate());
   render();
+  window.matchMedia("(max-width: 760px)").addEventListener("change", render);
   dbGet().then(function (saved) {
     if (saved && Array.isArray(saved.sections)) { state = saved; }
     else {
