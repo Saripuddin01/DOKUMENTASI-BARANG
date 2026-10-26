@@ -111,6 +111,7 @@ section.day { margin-top: 20px; scroll-margin-top: 150px; background: var(--pane
         <label class="btn" for="restoreFile">Pulihkan</label>
         <input type="file" id="restoreFile" accept=".json,application/json" hidden>
         <button class="primary" id="btnDocx">Simpan Word (.docx)</button>
+        <button class="primary" id="btnPdf">Simpan PDF</button>
       </div>
     </div>
   <form class="adddate" id="addDateForm">
@@ -218,6 +219,63 @@ function buildDoc(JSZip, sections, fmtDate) {
   zip.file("word/_rels/document.xml.rels", rels);
   media.forEach(function (d, i) { zip.file("word/media/foto" + (i + 1) + ".jpg", d.split(",")[1], { base64: true }); });
   return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", compression: "DEFLATE" });
+}
+
+/* ---------- pembuat PDF (jsPDF) ---------- */
+var pdfReady = null;
+function loadPdf() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  if (pdfReady) return pdfReady;
+  var urls = [
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+    "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"
+  ];
+  pdfReady = urls.reduce(function (p, u) {
+    return p.catch(function () {
+      return new Promise(function (res, rej) {
+        var sc = document.createElement("script");
+        sc.src = u;
+        sc.onload = function () { (window.jspdf && window.jspdf.jsPDF) ? res(window.jspdf.jsPDF) : rej(new Error("no jspdf")); };
+        sc.onerror = function () { rej(new Error("load failed")); };
+        document.head.appendChild(sc);
+      });
+    });
+  }, Promise.reject()).catch(function (e) { pdfReady = null; throw e; });
+  return pdfReady;
+}
+
+function buildPdf(JsPDF, sections, fmtDate) {
+  var doc = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  var M = 15, PW = 210, PH = 297, COLS = 6, CW = (PW - 2 * M) / COLS, IMGH = 40, NAMEH = 10, HEADH = 8, ROWH = IMGH + NAMEH;
+  var y = M;
+  doc.setLineWidth(0.2); doc.setDrawColor(0, 0, 0);
+  sections.forEach(function (s) {
+    var items = s.items.slice();
+    while (items.length && items.length % COLS) items.push({ name: "", img: "", w: 3, h: 4 });
+    if (y + HEADH + ROWH > PH - M) { doc.addPage(); y = M; }
+    doc.setFillColor(143, 220, 240); doc.rect(M, y, PW - 2 * M, HEADH, "FD");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+    doc.text("Tanggal " + fmtDate(s.date), PW / 2, y + HEADH / 2, { align: "center", baseline: "middle" });
+    y += HEADH;
+    for (var i = 0; i < items.length; i += COLS) {
+      if (y + ROWH > PH - M) { doc.addPage(); y = M; }
+      items.slice(i, i + COLS).forEach(function (it, c) {
+        var x = M + c * CW;
+        doc.rect(x, y, CW, IMGH); doc.rect(x, y + IMGH, CW, NAMEH);
+        if (it.img) {
+          var k = Math.min((CW - 3) / it.w, (IMGH - 3) / it.h), w = it.w * k, h = it.h * k;
+          doc.addImage(it.img, "JPEG", x + (CW - w) / 2, y + (IMGH - h) / 2, w, h);
+        }
+        if (it.name) {
+          doc.setFont("helvetica", "normal"); doc.setFontSize(7);
+          var lines = doc.splitTextToSize(it.name, CW - 2).slice(0, 3);
+          doc.text(lines, x + CW / 2, y + IMGH + NAMEH / 2 - (lines.length - 1) * 1.4, { align: "center", baseline: "middle" });
+        }
+      });
+      y += ROWH;
+    }
+  });
+  return doc.output("blob");
 }
 
 (function () {
@@ -380,27 +438,15 @@ function buildDoc(JSZip, sections, fmtDate) {
     });
     var multi = el("button", { type: "button", text: "+ Banyak foto" });
     multi.addEventListener("click", function () { pickTarget = { sec: sec.id, multi: true }; $("pickerMulti").value = ""; $("pickerMulti").click(); });
-    var pasteBtn = el("button", { type: "button", text: "Tempel daftar nama" });
-    var pasteBox = el("div", { class: "paste", hidden: "" });
-    var ta = el("textarea", { placeholder: "Satu nama barang per baris", "aria-label": "Daftar nama barang" });
-    var ok = el("button", { type: "button", class: "primary", text: "Tambahkan ke tanggal ini" });
-    pasteBox.append(ta, ok);
-    pasteBtn.addEventListener("click", function () { pasteBox.hidden = !pasteBox.hidden; if (!pasteBox.hidden) ta.focus(); });
-    ok.addEventListener("click", function () {
-      var names = ta.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
-      if (!names.length) return;
-      while (sec.items.length && isBlank(sec.items[sec.items.length - 1])) sec.items.pop();
-      names.forEach(function (n) { sec.items.push(newItem(n)); }); persist(); render();
-    });
-    var foot = el("div", { class: "foot" }, [add, multi, pasteBtn]);
-    return el("section", { class: "day" }, [head, grid, foot, pasteBox]);
+    var foot = el("div", { class: "foot" }, [add, multi]);
+    return el("section", { class: "day" }, [head, grid, foot]);
   }
 
   function updateStat() {
     var n = 0, p = 0;
     state.sections.forEach(function (s) { s.items.forEach(function (i) { if (!isBlank(i)) n++; if (i.img) p++; }); });
     $("stat").textContent = state.sections.length + " tanggal · " + n + " barang · " + p + " foto";
-    $("btnDocx").disabled = !state.sections.length;
+    $("btnDocx").disabled = !state.sections.length; $("btnPdf").disabled = !state.sections.length;
   }
   function render() {
     var box = $("days"); box.replaceChildren();
@@ -475,6 +521,20 @@ function buildDoc(JSZip, sections, fmtDate) {
       .catch(function (e) { if (e !== 0) toast("Gagal membuat file Word."); })
       .then(function () { updateStat(); });
   });
+  $("btnPdf").addEventListener("click", function () {
+    var secs = state.sections.map(function (s) { return { date: s.date, items: s.items.map(function (i) { return { name: i.name, img: i.img, w: i.w, h: i.h }; }) }; });
+    if (!secs.length) return;
+    var first = secs[0], last = secs[secs.length - 1];
+    var dmy = function (iso) { var p = iso.split("-"); return p[2] + "-" + p[1] + "-" + p[0]; };
+    var fn = first.date === last.date ? dmy(first.date) : dmy(first.date) + " sd " + dmy(last.date);
+    $("btnPdf").disabled = true;
+    loadPdf()
+      .catch(function () { toast("Pustaka PDF belum termuat. Periksa koneksi lalu coba lagi."); throw 0; })
+      .then(function (J) { return buildPdf(J, secs, fmt); })
+      .then(function (b) { return saveFile("Dokumentasi Barang " + fn + ".pdf", b); })
+      .catch(function (e) { if (e !== 0) toast("Gagal membuat file PDF."); })
+      .then(function () { updateStat(); });
+  });
   $("btnBackup").addEventListener("click", function () {
     saveFile("cadangan-dokumentasi-barang.json", JSON.stringify(state));
   });
@@ -496,6 +556,7 @@ function buildDoc(JSZip, sections, fmtDate) {
   $("newDate").value = today.getFullYear() + "-" + p2(today.getMonth() + 1) + "-" + p2(today.getDate());
   render();
   loadDocx().catch(function () {});
+  loadPdf().catch(function () {});
   dbGet().then(function (saved) {
     if (saved && Array.isArray(saved.sections)) { state = saved; }
     else {
