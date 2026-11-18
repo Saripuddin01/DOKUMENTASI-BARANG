@@ -86,7 +86,7 @@ section.day { margin-top: 20px; scroll-margin-top: 150px; background: var(--pane
   width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; text-align: center; resize: none; overflow: hidden;
   padding: 3px 2px; height: 44px; min-height: 0; background: var(--panel); line-height: 1.25; font-size: 11px;
 }
-main[data-lines="1"] .name { height: 28px; }
+main[data-lines="1"] .name { height: 28px; overflow: hidden; white-space: pre; }
 .del {
   position: absolute; top: 4px; right: 4px; min-height: 26px; width: 26px; padding: 0; justify-content: center; border-radius: 50%;
   background: color-mix(in srgb, var(--panel) 88%, transparent); font-size: 14px; line-height: 1;
@@ -95,7 +95,7 @@ main[data-lines="1"] .name { height: 28px; }
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); margin-top: 20px; }
 @media (max-width: 760px) {
   .name { font-size: 9.5px; height: 40px; padding: 2px 1px; }
-  main[data-lines="1"] .name { height: 26px; }
+  main[data-lines="1"] .name { height: 26px; overflow: hidden; white-space: pre; }
   .photo span { display: none; }
   .photo svg { width: 18px; height: 18px; }
   .del { width: 20px; height: 20px; min-height: 20px; top: 2px; right: 2px; font-size: 11px; }
@@ -128,7 +128,7 @@ main[data-lines="1"] .name { height: 28px; }
   </form>
   </header>
 
-  <p class="hint">Tempel daftar barang di atas. Kotak foto dibuat sebanyak daftar itu, dan baris terakhir selalu dilengkapi sampai 6 kotak. Ketuk kotak foto untuk memilih gambar; foto horizontal otomatis diputar jadi potret. Pakai Urutkan A–Z untuk mengurutkan nama barang, dan pilih 1 atau 2 baris untuk tulisan nama (berlaku juga di Word dan PDF; tulisan mengecil otomatis agar muat). Data tersimpan otomatis di browser ini. Pakai Cadangan sebelum membersihkan data browser atau pindah perangkat.</p>
+  <p class="hint">Tempel daftar barang di atas. Kotak foto dibuat sebanyak daftar itu, dan baris terakhir selalu dilengkapi sampai 6 kotak. Ketuk kotak foto untuk memilih gambar; foto horizontal otomatis diputar jadi potret. Pakai Urutkan A–Z untuk mengurutkan nama barang, dan pilih 1 atau 2 baris untuk tulisan nama (berlaku juga di Word dan PDF; pada 1 baris ukuran tulisan tetap dan kata yang tidak muat dipotong, pada 2 baris tulisan mengecil otomatis agar muat). Data tersimpan otomatis di browser ini. Pakai Cadangan sebelum membersihkan data browser atau pindah perangkat.</p>
 
   <main id="days"></main>
 </div>
@@ -161,7 +161,7 @@ function loadDocx() {
 }
 
 function buildDoc(JSZip, sections, fmtDate, lines) {
-  var COLS = 6, CW = 1500, BOX_W = 92, BOX_H = 112, EMU = 9525;
+  var COLS = 6, BOX_W = 94.5, BOX_H = 112, EMU = 9525, W = [1501, 1501, 1502, 1502, 1502, 1502], GRID = [1520, 1520, 1492, 1494, 1491, 1493];
   var NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
     'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
     'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
@@ -170,16 +170,34 @@ function buildDoc(JSZip, sections, fmtDate, lines) {
   function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   /* ukuran huruf (setengah poin) agar nama muat dalam 1 atau 2 baris */
   function nameSz(t) {
-    for (var s = 18; s > 10; s--) {
+    if (lines === 1) return 20;
+    for (var s = 20; s > 10; s--) {
       var need = t.length * (s / 2) * 0.5 * (lines > 1 ? 1.2 : 1) / 66;
       if (need <= lines) return s;
     }
     return 10;
   }
+  function ovf(t) {
+    try {
+      var c = document.createElement("canvas").getContext("2d");
+      c.font = "13.33px Calibri, Carlito, Arial, sans-serif";
+      var k = (document.fonts && document.fonts.check("13.33px Calibri")) ? 1 : 0.9;
+      return c.measureText(t).width * k > 98;
+    } catch (e) { return t.length > 17; }
+  }
+  function cut(t) {
+    try {
+      var c = document.createElement("canvas").getContext("2d");
+      c.font = "13.33px Calibri, Carlito, Arial, sans-serif";
+      var k = (document.fonts && document.fonts.check("13.33px Calibri")) ? 1 : 0.9;
+      while (t.length > 1 && c.measureText(t).width * k > 98) t = t.slice(0, -1);
+      return t.replace(/\s+$/, "");
+    } catch (e) { return t.slice(0, 17); }
+  }
   var media = [];
-  function cell(inner, span, shade) {
-    return '<w:tc><w:tcPr><w:tcW w:w="' + (CW * (span || 1)) + '" w:type="dxa"/>' + (span ? '<w:gridSpan w:val="' + span + '"/>' : '') +
-      (shade ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + '<w:vAlign w:val="center"/></w:tcPr>' + inner + '</w:tc>';
+  function cell(inner, span, shade, ci, nw) {
+    return '<w:tc><w:tcPr><w:tcW w:w="' + (span ? 9010 : W[ci]) + '" w:type="dxa"/>' + (span ? '<w:gridSpan w:val="' + span + '"/>' : '') +
+      (shade ? '<w:shd w:val="clear" w:color="auto" w:fill="' + shade + '"/>' : '') + (nw ? '<w:noWrap/>' : '') + '<w:vAlign w:val="center"/></w:tcPr>' + inner + '</w:tc>';
   }
   function imgPara(it) {
     if (!it.img) return '<w:p><w:pPr><w:keepNext/></w:pPr></w:p>';
@@ -187,7 +205,7 @@ function buildDoc(JSZip, sections, fmtDate, lines) {
     var cx = Math.round(it.w * k * EMU), cy = Math.round(it.h * k * EMU);
     media.push(it.img);
     var n = media.length;
-    return '<w:p><w:pPr><w:keepNext/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' +
+    return '<w:p><w:pPr><w:keepNext/><w:ind w:left="-113" w:right="-113"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' +
       '<wp:extent cx="' + cx + '" cy="' + cy + '"/><wp:docPr id="' + n + '" name="Foto ' + n + '"/>' +
       '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>' +
       '<pic:nvPicPr><pic:cNvPr id="' + n + '" name="foto' + n + '.jpg"/><pic:cNvPicPr/></pic:nvPicPr>' +
@@ -195,27 +213,27 @@ function buildDoc(JSZip, sections, fmtDate, lines) {
       '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>' +
       '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
   }
-  var nameH = lines > 1 ? 480 : 300;
+  var nameH = 283;
   var rows = "";
   sections.forEach(function (s) {
     var items = s.items.slice();
     while (items.length && items.length % COLS) items.push({ name: "", img: "", w: 3, h: 4 });
-    rows += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="500" w:hRule="atLeast"/></w:trPr>' + cell(
-      '<w:p><w:pPr><w:keepNext/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="26"/></w:rPr><w:t>' + esc("Tanggal " + fmtDate(s.date)) + '</w:t></w:r></w:p>',
-      COLS, "8FDCF0") + '</w:tr>';
+    rows += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="425" w:hRule="exact"/></w:trPr>' + cell(
+      '<w:p><w:pPr><w:keepNext/><w:ind w:left="-113" w:right="-113"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:b/><w:sz w:val="20"/></w:rPr><w:t>' + esc("Tanggal " + fmtDate(s.date)) + '</w:t></w:r></w:p>',
+      COLS, "8BE0F1") + '</w:tr>';
     for (var i = 0; i < items.length; i += COLS) {
       var chunk = items.slice(i, i + COLS);
-      rows += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="1750" w:hRule="atLeast"/></w:trPr>' +
-        chunk.map(function (it) { return cell(imgPara(it)); }).join("") + '</w:tr>';
-      rows += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="' + nameH + '" w:hRule="atLeast"/></w:trPr>' + chunk.map(function (it) {
-        return cell('<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' + (it.name ? '<w:r><w:rPr><w:sz w:val="' + nameSz(it.name) + '"/></w:rPr><w:t xml:space="preserve">' + esc(it.name) + '</w:t></w:r>' : '') + '</w:p>');
+      rows += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="1701" w:hRule="exact"/></w:trPr>' +
+        chunk.map(function (it, ci) { return cell(imgPara(it), 0, "", ci); }).join("") + '</w:tr>';
+      rows += '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="' + nameH + '" w:hRule="' + (lines > 1 ? "atLeast" : "exact") + '"/></w:trPr>' + chunk.map(function (it, ci) {
+        return cell('<w:p><w:pPr><w:ind w:left="-113" w:right="-113"/><w:jc w:val="' + "center" + '"/></w:pPr>' + (it.name ? '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="' + nameSz(it.name) + '"/></w:rPr><w:t xml:space="preserve">' + esc(lines === 1 ? cut(it.name) : it.name) + '</w:t></w:r>' : '') + '</w:p>', 0, "", ci, lines === 1);
       }).join("") + '</w:tr>';
     }
   });
-  var bd = function (n) { return '<w:' + n + ' w:val="single" w:sz="4" w:space="0" w:color="000000"/>'; };
-  var table = '<w:tbl><w:tblPr><w:tblW w:w="' + (CW * COLS) + '" w:type="dxa"/><w:tblBorders>' +
+  var bd = function (n) { return '<w:' + n + ' w:val="single" w:sz="4" w:space="0" w:color="auto"/>'; };
+  var table = '<w:tbl><w:tblPr><w:tblW w:w="9010" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>' +
     ["top", "left", "bottom", "right", "insideH", "insideV"].map(bd).join("") +
-    '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' + new Array(COLS + 1).join('<w:gridCol w:w="' + CW + '"/>') + '</w:tblGrid>' + rows + '</w:tbl>';
+    '</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' + GRID.map(function (g) { return '<w:gridCol w:w="' + g + '"/>'; }).join('') + '</w:tblGrid>' + rows + '</w:tbl>';
   var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ' + NS + '><w:body>' + table +
     '<w:p/><w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="993" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>';
   var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="20"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>';
@@ -261,9 +279,9 @@ function loadPdf() {
 
 function buildPdf(JsPDF, sections, fmtDate, lines) {
   var doc = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  var M = 15, PW = 210, PH = 297, COLS = 6, CW = (PW - 2 * M) / COLS, IMGH = 40, NAMEH = lines > 1 ? 10 : 6, HEADH = 11, ROWH = IMGH + NAMEH;
+  var M = 15, PW = 210, PH = 297, COLS = 6, CW = (PW - 2 * M) / COLS, IMGH = 40, NAMEH = 5.5, HEADH = 11, ROWH = IMGH + 9;
   var y = M;
-  doc.setLineWidth(0.2); doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.176); doc.setDrawColor(0, 0, 0);
   sections.forEach(function (s) {
     var items = s.items.slice();
     while (items.length && items.length % COLS) items.push({ name: "", img: "", w: 3, h: 4 });
@@ -273,27 +291,31 @@ function buildPdf(JsPDF, sections, fmtDate, lines) {
     doc.text("Tanggal " + fmtDate(s.date), PW / 2, y + HEADH / 2, { align: "center", baseline: "middle" });
     y += HEADH;
     for (var i = 0; i < items.length; i += COLS) {
-      if (y + ROWH > PH - M) { doc.addPage(); y = M; }
-      items.slice(i, i + COLS).forEach(function (it, c) {
+      var chunk = items.slice(i, i + COLS), nh = NAMEH;
+      if (lines > 1) { doc.setFont("helvetica", "normal"); doc.setFontSize(8); chunk.forEach(function (q) { if (q.name && doc.splitTextToSize(q.name, CW - 2).length > 1) nh = 9; }); }
+      var rowH = IMGH + nh;
+      if (y + rowH > PH - M) { doc.addPage(); y = M; }
+      chunk.forEach(function (it, c) {
         var x = M + c * CW;
-        doc.rect(x, y, CW, IMGH); doc.rect(x, y + IMGH, CW, NAMEH);
+        doc.rect(x, y, CW, IMGH); doc.rect(x, y + IMGH, CW, nh);
         if (it.img) {
           var k = Math.min((CW - 3) / it.w, (IMGH - 3) / it.h), w = it.w * k, h = it.h * k;
           doc.addImage(it.img, "JPEG", x + (CW - w) / 2, y + (IMGH - h) / 2, w, h);
         }
         if (it.name) {
           doc.setFont("helvetica", "normal");
-          var fs = 7, ln;
-          for (; fs >= 4; fs -= 0.5) {
+          var fs = 8, ln;
+          for (; fs >= (lines === 1 ? 8 : 4); fs -= 0.5) {
             doc.setFontSize(fs);
             ln = doc.splitTextToSize(it.name, CW - 2);
             if (ln.length <= lines) break;
           }
           ln = ln.slice(0, lines);
-          doc.text(ln, x + CW / 2, y + IMGH + NAMEH / 2 - (ln.length - 1) * fs * 0.18, { align: "center", baseline: "middle" });
+          if (lines === 1 && ln.length) { var t0 = it.name; while (t0.length > 1 && doc.getTextWidth(t0) > CW - 2) t0 = t0.slice(0, -1); ln = [t0]; }
+          doc.text(ln, x + CW / 2, y + IMGH + nh / 2 - (ln.length - 1) * fs * 0.18, { align: "center", baseline: "middle" });
         }
       });
-      y += ROWH;
+      y += rowH;
     }
   });
   return doc.output("blob");
@@ -401,6 +423,7 @@ function buildPdf(JsPDF, sections, fmtDate, lines) {
   }
   function fit(t) {
     var base = window.innerWidth <= 760 ? 9.5 : 11, s = base;
+    if (state.lines === 1) { t.style.fontSize = s + "px"; return; }
     t.style.fontSize = s + "px";
     while (t.scrollHeight > t.clientHeight + 1 && s > 5) { s -= 0.5; t.style.fontSize = s + "px"; }
   }
